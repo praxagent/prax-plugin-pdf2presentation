@@ -12,7 +12,7 @@ workspace access and shell commands (ngrok tunnel).
 """
 from __future__ import annotations
 
-PLUGIN_VERSION = "1"
+PLUGIN_VERSION = "0.2.0"
 PLUGIN_DESCRIPTION = "Stream a directory of audio files as internet radio"
 
 import logging

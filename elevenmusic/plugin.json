@@ -1,0 +1,13 @@
+{
+  "name": "elevenmusic",
+  "version": "0.2.0",
+  "description": "Generate music with ElevenLabs and save the audio to the workspace.",
+  "tools": [
+    {
+      "name": "generate_song",
+      "description": "Generate a song from a prompt using ElevenLabs Music.",
+      "route": "media",
+      "risk": "medium"
+    }
+  ]
+}

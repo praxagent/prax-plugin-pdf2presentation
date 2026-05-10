@@ -1,0 +1,21 @@
+{
+  "name": "txt2presentation",
+  "version": "0.2.0",
+  "description": "Convert text, PDF, web, YouTube, or audio sources into narrated video presentations and slide decks.",
+  "tools": [
+    {
+      "name": "text_to_presentation",
+      "description": "Convert a source into a narrated MP4 presentation plus slide artifacts.",
+      "route": "artifact",
+      "risk": "medium",
+      "orchestrator_exposure": "requested"
+    },
+    {
+      "name": "text_to_slides",
+      "description": "Convert a source into a Beamer slide deck and speaker notes without video narration.",
+      "route": "artifact",
+      "risk": "medium",
+      "orchestrator_exposure": "requested"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "name": "radio",
+  "version": "0.2.0",
+  "description": "Run and control a local streaming radio station from workspace audio files.",
+  "tools": [
+    {
+      "name": "start_radio",
+      "description": "Start the workspace radio stream.",
+      "route": "media",
+      "risk": "medium"
+    },
+    {
+      "name": "stop_radio",
+      "description": "Stop the workspace radio stream.",
+      "route": "media",
+      "risk": "medium"
+    },
+    {
+      "name": "radio_status",
+      "description": "Report current radio status.",
+      "route": "media",
+      "risk": "low"
+    },
+    {
+      "name": "radio_skip",
+      "description": "Skip to the next radio track.",
+      "route": "media",
+      "risk": "low"
+    },
+    {
+      "name": "radio_queue",
+      "description": "Show upcoming radio queue entries.",
+      "route": "media",
+      "risk": "low"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "imagegen",
+  "version": "0.2.0",
+  "description": "Generate and edit images with OpenAI Images and save them to the workspace.",
+  "tools": [
+    {
+      "name": "generate_image",
+      "description": "Generate an image from a prompt using OpenAI Images.",
+      "route": "media",
+      "risk": "medium"
+    },
+    {
+      "name": "edit_image",
+      "description": "Edit an existing workspace image using OpenAI Images.",
+      "route": "media",
+      "risk": "medium"
+    }
+  ]
+}

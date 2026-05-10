@@ -13,7 +13,7 @@ API docs: https://elevenlabs.io/docs/api-reference/music/create-music
 """
 from __future__ import annotations
 
-PLUGIN_VERSION = "1"
+PLUGIN_VERSION = "0.2.0"
 PLUGIN_DESCRIPTION = "Generate songs with ElevenLabs Music API"
 
 PLUGIN_PERMISSIONS = [

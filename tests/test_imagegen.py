@@ -96,7 +96,7 @@ class TestRegistration:
         assert "edit_image" in tool_names
 
     def test_plugin_version(self):
-        assert plugin.PLUGIN_VERSION == "1"
+        assert plugin.PLUGIN_VERSION == "0.2.0"
 
     def test_plugin_description(self):
         assert plugin.PLUGIN_DESCRIPTION

@@ -9,7 +9,6 @@ from __future__ import annotations
 import os
 import struct
 import sys
-import threading
 import time
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -120,7 +119,7 @@ class TestRegistration:
         assert names == {"start_radio", "stop_radio", "radio_status", "radio_skip", "radio_queue"}
 
     def test_plugin_version(self):
-        assert plugin.PLUGIN_VERSION == "1"
+        assert plugin.PLUGIN_VERSION == "0.2.0"
 
     def test_plugin_description(self):
         assert plugin.PLUGIN_DESCRIPTION

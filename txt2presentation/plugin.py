@@ -31,7 +31,7 @@ accesses os.environ, prax.settings, or API keys.
 """
 from __future__ import annotations
 
-PLUGIN_VERSION = "1"
+PLUGIN_VERSION = "0.2.0"
 PLUGIN_DESCRIPTION = "Convert any text source into a narrated video presentation"
 
 import json

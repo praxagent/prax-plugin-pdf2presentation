@@ -13,7 +13,7 @@ API docs: https://platform.openai.com/docs/api-reference/images
 """
 from __future__ import annotations
 
-PLUGIN_VERSION = "1"
+PLUGIN_VERSION = "0.2.0"
 PLUGIN_DESCRIPTION = (
     "AI image generation and editing via OpenAI gpt-image-1 (DALL-E). "
     "Generate images from text prompts or edit existing images."
