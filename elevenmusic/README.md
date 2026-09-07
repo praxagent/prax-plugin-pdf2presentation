@@ -18,14 +18,11 @@ Generate songs with the [ElevenLabs Music API](https://elevenlabs.io/docs/api-re
 ELEVENLABS_API_KEY=your_key_here
 ```
 
-4. **Import the plugin** and **approve the permission** when prompted:
+4. **Import the plugin**:
 
 > "Import the elevenmusic plugin from prax-plugins"
 
-Prax will show the permission request:
-
-> elevenmusic needs access to ELEVENLABS_API_KEY: "Authenticate with the ElevenLabs Music API to generate songs."
-> Approve? [yes/no]
+**Known gap (2026-09):** as an IMPORTED plugin this currently fails at the key step. `caps.get_approved_secret("ELEVENLABS_API_KEY")` requires the key to be approved for the plugin in Prax's plugin registry, and nothing in Prax approves a secret for an IMPORTED plugin — `PluginRegistry.approve_permission` is called only on the BUILTIN/WORKSPACE load path (`prax/plugins/loader.py`), and there is no agent tool, HTTP route, or UI prompt for it. `generate_song` returns the `PermissionError` message unless `approved_permissions` is added by hand to `prax/plugins/registry.json`.
 
 ## Usage
 
@@ -49,10 +46,10 @@ Once installed:
 
 ## Permissions
 
-This plugin declares `PLUGIN_PERMISSIONS` to request access to `ELEVENLABS_API_KEY`. The key is accessed through the capabilities gateway's `get_approved_secret()` method — the plugin never reads environment variables directly.
+This plugin declares `ELEVENLABS_API_KEY` under `## secrets` in `permissions.md` (the declaration Prax reads for IMPORTED plugins) and also in the legacy `PLUGIN_PERMISSIONS` constant (read only for BUILTIN/WORKSPACE plugins). The key is read through the capabilities gateway's `get_approved_secret()` method — the plugin never reads environment variables directly — and is then placed in the plugin's own request header, so its value does pass through plugin code.
 
-- **BUILTIN/WORKSPACE** plugins: auto-approved
-- **IMPORTED** plugins: requires explicit user approval
+- **BUILTIN/WORKSPACE** plugins: auto-approved at load
+- **IMPORTED** plugins: requires the key in the plugin's `approved_permissions` in the registry — see the known gap under Setup
 
 ## Requirements
 

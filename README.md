@@ -9,6 +9,7 @@ Plugin collection for [Prax](https://github.com/praxagent/prax). Each subfolder 
 | [`txt2presentation`](txt2presentation/) | 1 | Any text source → narrated video presentation (Beamer + TTS + ffmpeg) |
 | [`elevenmusic`](elevenmusic/) | 1 | Generate songs with ElevenLabs Music API |
 | [`radio`](radio/) | 1 | Stream audio files as an internet radio station |
+| [`imagegen`](imagegen/) | 1 | Generate and edit images with the OpenAI Images API (gpt-image-1) |
 
 ## Installing plugins
 
@@ -297,7 +298,7 @@ Generate songs with the [ElevenLabs Music API](https://elevenlabs.io/docs/api-re
 ELEVENLABS_API_KEY=your_key
 ```
 
-This plugin uses the [plugin permissions](#plugin-permissions) system — it declares `PLUGIN_PERMISSIONS` for `ELEVENLABS_API_KEY` and accesses it via `caps.get_approved_secret()`. IMPORTED plugins require explicit user approval.
+This plugin declares `ELEVENLABS_API_KEY` under `## secrets` in its `permissions.md` and reads it via `caps.get_approved_secret()`. See [Plugin permissions](#plugin-permissions) — including the known gap: Prax currently has no way to approve that secret for an IMPORTED plugin, so the tool fails with `PermissionError` when this plugin is imported from this repo.
 
 ### Usage
 
@@ -330,6 +331,10 @@ Stream a directory of audio files as an internet radio station. All listeners he
 No API keys — just audio files in a directory. Supports MP3, OGG, WAV, FLAC, AAC, M4A.
 
 Optional: install [ngrok](https://ngrok.com/download) for public access (`expose_ngrok=True`).
+
+**Known gap (2026-09):** `expose_ngrok=True` does not work with the shipped `radio/permissions.md`. The plugin launches ngrok with `caps.run_command(["sh", "-c", "nohup ngrok http …"])` and stops it with `pkill`, but `## allowed_commands` lists only `ngrok`, `ffprobe`, `which`; Prax rejects any `run_command` whose argv[0] is not listed (`prax/plugins/capabilities.py`, `run_command`), the plugin swallows that error, and the tool reports "ngrok not available" even with ngrok installed.
+
+The station itself is a stdlib `http.server.HTTPServer` bound to `0.0.0.0` (all interfaces) with no authentication — anyone who can reach the port can listen and read `/status` and `/playlist`. See [radio/README.md](radio/README.md#how-it-works).
 
 ### Usage
 
@@ -394,7 +399,9 @@ def register(caps):
 
 ### 2. Create `permissions.md` (required for IMPORTED plugins)
 
-Every plugin must have a `permissions.md` declaring exactly what it can do. **This file is authoritative** — the framework enforces it as the ceiling of the plugin's capabilities. The plugin cannot do anything beyond what's declared here.
+Every plugin must have a `permissions.md` declaring exactly what it can do. **The framework enforces it as written** for what goes through `caps.*`: the LLM, HTTP, command, TTS and transcription gateway methods each check that their capability is listed under `## capabilities` (the `filesystem` entry is recognised but the file methods do not check it today), `caps.run_command()` rejects any argv[0] not under `## allowed_commands` (when that section is present), and `## secrets` is what the loader records as the plugin's declared secrets (`prax/plugins/loader.py`, `prax/plugins/capabilities.py`).
+
+Two honest qualifications. First, the file is **self-declared by the plugin author** — Prax enforces whatever it says, but there is no operator review or approval step for its contents (the acknowledgement step at import time covers the code scan's warnings, not `permissions.md`). Reviewing the file yourself before importing is the control. Second, it governs only calls made through `caps.*`; plain Python that bypasses the gateway (stdlib sockets, `open()`) is covered only by the import-time scan and the plugin-host subprocess boundary (stripped environment, `prax/plugins/bridge.py` `_SAFE_ENV`) described under [Security restrictions](#security-restrictions) — no in-process runtime guard is installed today — not by this file.
 
 ```markdown
 # Permissions
@@ -446,7 +453,7 @@ Tell Prax: `"Import this plugin: https://github.com/you/my-plugin"`
 
 ### Capabilities gateway
 
-The `PluginCapabilities` object (`caps`) is the official SDK for plugins to access Prax services. Plugins never touch API keys, environment variables, or settings directly — the gateway handles credentials internally.
+The `PluginCapabilities` object (`caps`) is the official SDK for plugins to access Prax services. Plugins never read environment variables or `prax.settings` directly. For the LLM, TTS and transcription paths the gateway injects the credential and the plugin never sees it. A plugin that calls a third-party REST API itself (`elevenmusic`, `imagegen`) receives the key's value from `caps.get_approved_secret()` and puts it in its own request headers — so in that case the key does pass through plugin code.
 
 | Method | Description |
 |--------|-------------|
@@ -466,49 +473,49 @@ The `PluginCapabilities` object (`caps`) is the official SDK for plugins to acce
 
 **Plugin-owned credentials (legacy):** If your plugin needs its own API credentials and you want to use `get_config()`, use config key names that don't match the secret patterns. For example, use `myservice_id` / `myservice_auth` instead of `myservice_api_key` / `myservice_api_secret`.
 
-**Plugin permissions (recommended):** For secrets that match the blocked patterns (e.g., `ELEVENLABS_API_KEY`), declare them in `PLUGIN_PERMISSIONS` and access them via `caps.get_approved_secret()`. See [Plugin permissions](#plugin-permissions) below.
+**Plugin permissions:** For secrets that match the blocked patterns (e.g., `ELEVENLABS_API_KEY`), declare them under `## secrets` in `permissions.md` and access them via `caps.get_approved_secret()`. See [Plugin permissions](#plugin-permissions) below, including its known gap for IMPORTED plugins.
 
 ### Plugin permissions
 
-Plugins can declare that they need access to specific secrets (API keys, tokens, etc.) by setting a `PLUGIN_PERMISSIONS` constant:
+A plugin declares the secrets (API keys, tokens) it needs under `## secrets` in `permissions.md`, one env var name per line with a reason:
 
-```python
-PLUGIN_PERMISSIONS = [
-    {
-        "key": "ELEVENLABS_API_KEY",
-        "reason": "Authenticate with the ElevenLabs API to generate music.",
-    },
-]
+```markdown
+## secrets
+- ELEVENLABS_API_KEY: Authenticate with the ElevenLabs API to generate music
 ```
 
-At load time, Prax reads the declaration and records it in the plugin registry. Access is gated by trust tier:
+For IMPORTED plugins (everything installed from a repo like this one) this is the **only** declaration Prax reads: the loader records the `permissions.md` secrets in the plugin registry as the plugin's declared permissions (`prax/plugins/loader.py`, `_load_imported_via_bridge`).
+
+`PLUGIN_PERMISSIONS` (a module-level list of `{"key", "reason"}` dicts in `plugin.py`) is a legacy constant that the loader reads **only for BUILTIN and WORKSPACE plugins**, which load in-process; it is ignored for IMPORTED plugins. The plugins in this repo that need a key declare both.
+
+Access at runtime is gated by trust tier:
 
 | Tier | Behavior |
 |------|----------|
-| `builtin` | Always allowed — no approval needed |
-| `workspace` | Auto-approved at load time |
-| `imported` | Requires explicit user approval before the secret is accessible |
+| `builtin` | Always allowed |
+| `workspace` | Declared secrets are auto-approved at load time |
+| `imported` | `caps.get_approved_secret()` succeeds only if the key is in the plugin's `approved_permissions` in the registry |
 
-To read an approved secret at runtime:
+To read a secret at runtime:
 
 ```python
 api_key = caps.get_approved_secret("ELEVENLABS_API_KEY")
 ```
 
-The secret value is read from `prax.settings` using the Pydantic field alias mapping (e.g., `ELEVENLABS_API_KEY` → `settings.elevenlabs_api_key`). The raw value is never stored in the registry — only the approval flag is persisted.
+The secret value is read from `prax.settings` using the Pydantic field alias mapping (e.g., `ELEVENLABS_API_KEY` → `settings.elevenlabs_api_key`). The raw value is never stored in the registry — only the approval flag is persisted. Unapproved access raises `PermissionError` with a message telling the user to approve it in plugin settings.
 
-Unapproved access raises `PermissionError` with a message telling the user to approve it in plugin settings.
+**Known gap (2026-09):** nothing in Prax approves a secret for an IMPORTED plugin. `PluginRegistry.approve_permission` is called only on the BUILTIN/WORKSPACE load path (`prax/plugins/loader.py`); there is no agent tool, HTTP route, or TeamWork UI action that calls it, and the "approve it in plugin settings" message points at a setting that does not exist. Today an IMPORTED plugin's `get_approved_secret()` raises `PermissionError` unless `approved_permissions` is added by hand to the registry file (`prax/plugins/registry.json`). This affects `elevenmusic` and `imagegen` when imported from this repo.
 
 ### Security restrictions
 
-Prax applies multiple security layers when importing plugins. Your plugin will be **rejected** if it triggers any of these:
+Prax applies multiple security layers when importing plugins. Rows that the import-time code scan flags block your plugin from activating until the user acknowledges the warnings; the last two rows (built-in tool name collisions, sandbox test) are hard enforcement that acknowledgement does not clear — a tool whose name collides with a built-in is dropped at load time, and a failed sandbox test rejects the write or activation (`plugin_write`, `plugin_activate` in `prax/agent/plugin_tools.py`):
 
 | Restriction | Details |
 |-------------|---------|
 | **No `subprocess`, `os.system`, `os.popen`** | Detected by AST analysis. Use `caps.run_command()` instead. |
 | **No `eval`, `exec`, `compile`, `__import__`** | Dynamic code execution is blocked. |
 | **No `os.environ` access** | Plugins cannot read environment variables. Use `caps.get_config()`. |
-| **No raw `socket` usage** | Use `caps.http_get()` / `caps.http_post()`. |
+| **No raw `socket` usage** | The import-time scan (regex + AST) flags `socket` as a warning to acknowledge; the stdlib `http.server` module is not flagged. **Known gap (2026-09):** `prax/plugins/sandbox_guard.py` defines an audit hook that would log (not block) socket events, listed under `_MONITORED_EVENTS`, but nothing in Prax calls `install_all_guards()` / `install_audit_hook()` at startup, so the guard is never installed in the Prax process, and IMPORTED plugin tools run in the plugin-host subprocess (`prax/plugins/host.py`), which does not import it either. No runtime socket guard is active today; the only controls on raw socket use are the import-time scan (an acknowledgeable warning) and the fact that the code runs in the plugin-host subprocess with a stripped environment (`prax/plugins/bridge.py`, `_SAFE_ENV`), which withholds secrets but does not stop the plugin from opening sockets. The contract is still: outbound HTTP goes through `caps.http_get()` / `caps.http_post()`. The shipped `radio` plugin binds its own `http.server.HTTPServer` on `0.0.0.0` (see its README). |
 | **No direct `prax.settings` import** | Use `caps.get_config()` for non-secret values. |
 | **No built-in tool name collisions** | Your tools cannot share names with Prax's ~100+ built-in tools. |
 | **Sandbox test must pass** | Before activation, your plugin is imported in an isolated subprocess with a stripped environment (no API keys) and a 30-second timeout. |

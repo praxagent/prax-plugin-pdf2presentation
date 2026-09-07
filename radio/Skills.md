@@ -16,11 +16,12 @@
 
 ## Tips
 
-- Default music directory is `{workspace}/music/` — remind users to put audio files there first
+- Default music directory is `music/` under the plugin's scoped directory (`caps.workspace_path("music")`; for an imported plugin that is inside `plugin_data/…/`, not the workspace root) — remind users to put audio files there first
 - Supports MP3, OGG, WAV, FLAC, AAC, M4A — scans subdirectories recursively
 - Shuffle is on by default — turn it off with `shuffle=False` for sequential playback
 - The stream URL works in VLC, browsers, mpv, and most media players: `vlc http://localhost:{port}/stream`
-- Use `expose_ngrok=True` to create a public URL (requires ngrok installed)
+- `expose_ngrok=True` is documented but does not work with the shipped `permissions.md` (the plugin launches ngrok via `sh` and stops it via `pkill`, neither of which is in `allowed_commands`) — expect "ngrok not available"; do not promise a public URL
+- The stream server binds `0.0.0.0` with no authentication — tell the user the port is reachable by anyone who can reach the machine
 - Port auto-selects if not specified — read it from the start response
 - Use `radio_status` to check what's playing and how many listeners are connected
 - Use `radio_skip` if the user wants to skip the current track
@@ -30,7 +31,7 @@
 ## Requirements
 
 - Audio files in a directory (no API keys needed)
-- Optional: [ngrok](https://ngrok.com/download) for public access
+- Optional: [ngrok](https://ngrok.com/download) for public access (currently non-functional, see Tips)
 
 ## HTTP endpoints
 
