@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/praxagent/prax-plugins/compare/v0.2.0...v0.3.0) (2026-09-07)
+
+
+### Documentation
+
+* describe the plugin contract as the loader enforces it ([#4](https://github.com/praxagent/prax-plugins/issues/4)) ([fd9fbbd](https://github.com/praxagent/prax-plugins/commit/fd9fbbdb26fd478e5bd8c103eeb8bec6a33fba09))
+
 ## [0.2.0](https://github.com/praxagent/prax-plugins/compare/v0.1.0...v0.2.0) (2026-04-03)
 
 
